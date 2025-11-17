@@ -1,6 +1,6 @@
 
 import { LX } from 'lexgui';
-import 'lexgui/extensions/codeeditor.js';
+import { CodeEditor } from 'lexgui/extensions/codeeditor.js';
 
 import { wgpuEngine as WGE } from './wgpuengine.module.js';
 
@@ -151,10 +151,11 @@ this.onRender = function() {
             // });
 
             // Update with a custom shader
-            WGE.RendererStorage.getShader( "mesh_forward_custom.wgsl", boxMaterial, null, ( shader, shaderContent ) => {
-                boxMaterial.setShader( shader );
-                this.shaderData[ shader.path ] = shaderContent;
-            });
+            // WGE.RendererStorage.getShader( "custom_shader.wgsl", boxMaterial, null, ( shader, shaderContent ) => {
+            //     boxMaterial.type = WGE.MaterialType.MATERIAL_UNLIT;
+            //     boxMaterial.setShader( shader );
+            //     this.shaderData[ shader.path ] = shaderContent;
+            // });
 
             const box = new WGE.MeshInstance3D();
             box.name = "Box";
@@ -291,20 +292,20 @@ this.onRender = function() {
                 {
                     name: "Translate",
                     icon: "Move",
-                    callback: this.onGizmoMode.bind( this ),
+                    callback: this.onGizmoMode.bind( this, "Translate" ),
                     selectable: true,
                     selected: true,
                 },
                 {
                     name: "Rotate",
                     icon: "RotateRight",
-                    callback: this.onGizmoMode.bind( this ),
+                    callback: this.onGizmoMode.bind( this, "Rotate" ),
                     selectable: true
                 },
                 {
                     name: "Scale",
                     icon: "Scale3d",
-                    callback: this.onGizmoMode.bind( this ),
+                    callback: this.onGizmoMode.bind( this, "Scale" ),
                     selectable: true
                 }
             ],
@@ -553,6 +554,7 @@ this.onRender = function() {
     },
 
     onGizmoMode( mode ) {
+
         switch( mode )
         {
             case "Translate":
@@ -744,15 +746,16 @@ this.onRender = function() {
             panel.clear();
         }
 
+        const properties = options.properties ?? obj.constructor.properties;
 
-        if( obj.constructor.properties?.length )
+        if( properties?.length )
         {
             if( options.branch ?? true )
             {
                 panel.branch( options.propertiesTitle ?? "Properties", { icon: options.propertiesIcon } );
             }
 
-            for( let p of obj.constructor.properties )
+            for( let p of properties )
             {
                 if( !p )
                 {
@@ -760,7 +763,7 @@ this.onRender = function() {
                     continue;
                 }
 
-                const widgetName = p.prettyName ?? p.name;
+                const compName = p.prettyName ?? p.name;
 
                 const defaultCallback = ( value ) => {
                     const oldValue = p.getter ? p.getter.call( obj ) : obj[ p.name ];
@@ -781,18 +784,20 @@ this.onRender = function() {
                 switch( p.type )
                 {
                     case Number:
-                        panel.addNumber( widgetName, defaultValue, defaultCallback, { min: p.min, max: p.max, step: p.step, skipSlider: true, disabled: p.disabled, units: p.units } );
+                        panel.addNumber( compName, defaultValue, defaultCallback, { min: p.min, max: p.max, step: p.step, skipSlider: true, disabled: p.disabled, units: p.units } );
                         break;
                     case String:
-                        panel.addText( widgetName, defaultValue, defaultCallback, { disabled: p.disabled } );
+                        panel.addText( compName, defaultValue, defaultCallback, { disabled: p.disabled } );
                         break;
                     case Boolean:
-                        panel.addCheckbox( widgetName, defaultValue, defaultCallback, { disabled: p.disabled } );
+                        panel.addCheckbox( compName, defaultValue, defaultCallback, { disabled: p.disabled, suboptions: p.suboptions ? ( subOptPanel ) => {
+                            this.inspectPropertiesAndMethods( node, obj, subOptPanel, false, { branch: false, properties: p.suboptions, ...options } );
+                        } : undefined } );
                         break;
                     case WGE.vec2:
                     {
                         const value = obj[ p.name ] ?? new WGE.vec2( 0.0, 0.0 );
-                        panel.addVector2( widgetName, [ value.x, value.y ], value => {
+                        panel.addVector2( compName, [ value.x, value.y ], value => {
                             const vec2 = new WGE.vec2( value[ 0 ], value[ 1 ] );
                             if( p.setter )
                             {
@@ -809,7 +814,7 @@ this.onRender = function() {
                     case WGE.vec3:
                     {
                         const value = obj[ p.name ] ?? new WGE.vec3( 0.0, 0.0, 0.0 );
-                        panel.addVector3( widgetName, [ value.x, value.y, value.z ], value => {
+                        panel.addVector3( compName, [ value.x, value.y, value.z ], value => {
                             const vec3 = new WGE.vec3( value[ 0 ], value[ 1 ], value[ 2 ] );
                             if( p.setter )
                             {
@@ -826,7 +831,7 @@ this.onRender = function() {
                     case WGE.vec4:
                     {
                         const value = obj[ p.name ] ?? new WGE.vec4( 0.0, 0.0, 0.0, 1.0 );
-                        panel.addVector4( widgetName, [ value.x, value.y, value.z, value.w ], value => {
+                        panel.addVector4( compName, [ value.x, value.y, value.z, value.w ], value => {
                             const vec4 = new WGE.vec4( value[ 0 ], value[ 1 ], value[ 2 ], value[ 3 ] );
                             if( p.setter )
                             {
@@ -881,7 +886,7 @@ this.onRender = function() {
                     case "Enum":
                     {
                         const values = Object.values( WGE[ p.enum ].values ).map( v => v.constructor.name.replace( `${ p.enum }_`, "" ) )
-                        panel.addSelect( widgetName, values, values[ obj[ p.name ].value ?? obj[ p.name ] ], value => {
+                        panel.addSelect( compName, values, values[ obj[ p.name ].value ?? obj[ p.name ] ], value => {
                             obj[ p.name ] = WGE[ p.enum ][ value ];
                             LX.emit( `@on_${ p.name }_changed`, { obj, value } );
                         }, { disabled: p.disabled } );
@@ -892,7 +897,7 @@ this.onRender = function() {
                         const texture = obj[ p.name ];
                         const textureName = texture.name;
                         panel.sameLine( 2 );
-                        const texNameWidget = panel.addText( widgetName, textureName ?? "TEXTURE_NAME_ERROR", null, { icon } );
+                        const texNameWidget = panel.addText( compName, textureName ?? "TEXTURE_NAME_ERROR", null, { icon } );
                         texNameWidget.root.style.flex = 1;
                         panel.addButton( null, "LoadTexture", ( data, file ) => {
                             const filename = file.name;
@@ -909,7 +914,7 @@ this.onRender = function() {
 
                         if( !panel.addShader )
                         {
-                            LX.ADD_CUSTOM_WIDGET( "Shader", {
+                            LX.ADD_CUSTOM_COMPONENT( "Shader", {
                                 icon,
                                 default: {
                                     path: ""
@@ -932,7 +937,7 @@ this.onRender = function() {
                             });
                         }
 
-                        panel.addShader( widgetName, shader, ( value ) => {
+                        panel.addShader( compName, shader, ( value ) => {
                             LX.emit( `@on_${ p.name }_changed`, { obj, value } );
                         }, shader, node );
 
@@ -944,7 +949,7 @@ this.onRender = function() {
 
                         if( !panel.addSkeleton )
                         {
-                            LX.ADD_CUSTOM_WIDGET( "Skeleton", {
+                            LX.ADD_CUSTOM_COMPONENT( "Skeleton", {
                                 icon,
                                 default: {},
                                 onCreate: ( panel, skeleton, node ) => {
@@ -958,7 +963,7 @@ this.onRender = function() {
                             });
                         }
 
-                        panel.addSkeleton( widgetName, skeleton, ( value ) => {
+                        panel.addSkeleton( compName, skeleton, ( value ) => {
                             LX.emit( `@on_${ p.name }_changed`, { obj, value } );
                         }, skeleton, node );
 
@@ -970,7 +975,7 @@ this.onRender = function() {
 
                         if( !panel.addAABB )
                         {
-                            LX.ADD_CUSTOM_WIDGET( "AABB", {
+                            LX.ADD_CUSTOM_COMPONENT( "AABB", {
                                 icon,
                                 _get_center: function() {
                                     return [ this.center.x, this.center.y, this.center.z ];
@@ -991,7 +996,7 @@ this.onRender = function() {
                             });
                         }
 
-                        panel.addAABB( widgetName, aabb, ( value ) => {
+                        panel.addAABB( compName, aabb, ( value ) => {
                             LX.emit( `@on_${ p.name }_changed`, { obj, value } );
                         } );
                         break;
@@ -1011,9 +1016,9 @@ this.onRender = function() {
 
         for( let p of obj.constructor.methods )
         {
-            const widgetName = p.prettyName ?? p.name;
+            const compName = p.prettyName ?? p.name;
 
-            panel.addButton( null, widgetName, () => {
+            panel.addButton( null, compName, () => {
                 if( obj[ p.name ] )
                 {
                     obj[ p.name ]( "Walk", 0.0, -1.0, 1.0 );
@@ -1096,7 +1101,7 @@ this.onRender = function() {
 
         if( !this.codeEditor )
         {
-            this.codeEditor = new LX.CodeEditor( this.codeEditorArea, {
+            this.codeEditor = new CodeEditor( this.codeEditorArea, {
                 skipInfo: true,
                 allowAddScripts: false,
                 highlight: "JavaScript",
@@ -1175,7 +1180,7 @@ this.onRender = function() {
 
         if( !this.codeEditor )
         {
-            this.codeEditor = new LX.CodeEditor( this.codeEditorArea, {
+            this.codeEditor = new CodeEditor( this.codeEditorArea, {
                 skipInfo: true,
                 allowAddScripts: false,
                 highlight: "WGSL",
