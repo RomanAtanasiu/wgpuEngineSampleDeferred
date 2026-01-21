@@ -86,6 +86,6 @@ if (MSVC)
 endif()
 
 # wgpuEngine
-add_subdirectory(libraries/wgpuEngine)
+add_subdirectory(libraries/wgpuEngineDefered)
 target_link_libraries(${PROJECT_NAME} PUBLIC webgpuEngine)
 

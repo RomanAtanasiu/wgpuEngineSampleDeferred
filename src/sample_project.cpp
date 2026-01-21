@@ -68,8 +68,10 @@ void get_engine_config(sEngineConfiguration& out_config)
     out_config.window_height = 720;
 
     // Optional callbacks
+    /*
     out_config.engine_post_initialize = engine_post_initialize;
     out_config.engine_pre_update = nullptr;
     out_config.engine_post_update = nullptr;
     out_config.engine_render = engine_render;
+    */
 }
