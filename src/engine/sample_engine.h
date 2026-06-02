@@ -11,6 +11,7 @@ class SampleEngine : public Engine {
 
     Node3D* scene_root = nullptr;
 
+
 public:
 
 	int initialize(Renderer* renderer, const sEngineConfiguration& configuration = {}) override;
