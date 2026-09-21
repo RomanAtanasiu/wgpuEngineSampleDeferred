@@ -5,6 +5,8 @@
 #include "graphics/renderer.h"
 #include "string.h"
 
+#include "graphics/texture.h"
+
 class SampleRenderer : public Renderer {
 
 public:
@@ -23,8 +25,16 @@ public:
 
     float time = 0;
     WGPUBindGroup time_bindgroup = nullptr;
-    WGPUBuffer time_buffer;
+    WGPUBuffer time_buffer = nullptr;
 
+    int actual_requested_timestamps = 0;
+    int max_timestamps = 500;
+    bool activated_request_timestamps = false;
+
+    bool taa_activated = true;
+
+    //WGPUTexture dst_texture_for_post_process = nullptr;
+    Texture* dst_texture_for_post_process;
 
     SampleRenderer(const sRendererConfiguration& config = {});
 
@@ -36,6 +46,6 @@ public:
 
     void update(float delta_time) override;
     void render() override;
-
+    
     
 };

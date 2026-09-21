@@ -13,8 +13,8 @@ int main()
     SampleRenderer* renderer = new SampleRenderer();
 
     sEngineConfiguration configuration = {
-        .window_width = 1280,
-        .window_height = 720
+        .window_width = 1280 * 3,
+        .window_height = 720 * 3,
     };
 
     if (engine->initialize(renderer, configuration)) {

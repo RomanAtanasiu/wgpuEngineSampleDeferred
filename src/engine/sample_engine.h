@@ -11,6 +11,10 @@ class SampleEngine : public Engine {
 
     Node3D* scene_root = nullptr;
 
+    Node3D* root_entity = nullptr;
+    float velocity = 1;
+    float time = 0;
+    int frame = 1;
 
 public:
 
